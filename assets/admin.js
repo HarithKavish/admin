@@ -226,10 +226,36 @@
         show('gate-signed-out');
     }
 
+    /*
+     * A refusal that says what the service actually knows.
+     *
+     * "Access denied" with nothing beside it is only actionable if you already
+     * know the rule. These three facts are the ones that decide it, and they are
+     * the viewer's own account told back to them, so nothing here is a leak.
+     */
     function denied(viewer) {
         clearAttempt();
-        el('denied-name').textContent = (viewer && viewer.name) || 'Unknown';
-        el('denied-email').textContent = (viewer && viewer.email) || 'No address on this account';
+        var who = viewer || {};
+
+        el('denied-name').textContent = who.name || 'Unknown';
+
+        // The address that would count, not merely the one on the row: an
+        // unverified `users.email` is not proof, and a Google link is.
+        var addresses = [];
+        if (who.email && who.emailVerified) addresses.push(who.email);
+        (who.providerEmails || []).forEach(function (address) {
+            if (addresses.indexOf(address) === -1) addresses.push(address);
+        });
+
+        el('denied-email').textContent = addresses.length
+            ? addresses.join(', ')
+            : (who.email ? who.email + ' (never verified)' : 'None proved');
+
+        var methods = (who.identities || []).map(function (issuer) {
+            return ISSUER_LABELS[issuer] || issuer.replace(/^https?:\/\//, '');
+        });
+        el('denied-methods').textContent = methods.length ? methods.join(', ') : 'No linked provider';
+
         el('denied-signout').href = FRONT_DOOR + '/signout?next=' + encodeURIComponent(location.href);
         show('gate-denied');
     }
