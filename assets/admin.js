@@ -19,16 +19,36 @@
     'use strict';
 
     /*
-     * The front door, not the account host.
+     * Both places a session can live, asked in that order.
      *
-     * Both hostnames run the same deployable and either would answer, but a
-     * session originates at the front door and lives there from the moment
-     * someone signs in. A session on the account host exists only after that
-     * host has redeemed a handoff ticket, which may never have happened — so
-     * asking the account host would report "not signed in" to someone who
-     * plainly is.
+     * The two hostnames run one deployable but they are two cookie scopes, and
+     * `__Host-hk_session` is host-only by definition — so a person signed in to
+     * the ecosystem holds a session on the front door, on the account host, or
+     * on both, depending on which routes they happened to travel. Neither host
+     * can see the other's.
+     *
+     * The front door is asked first because that is where a session originates.
+     * But asking only the front door reports "not signed in" to someone whose
+     * session is on the account host — which is a real state: the handoff at
+     * `lib/auth/handoff.ts` exists precisely to put one there. One host saying
+     * no is not the ecosystem saying no, so the second is asked before the
+     * console believes it.
+     *
+     * The extra request is spent only on the way to a refusal. A visitor who is
+     * signed in at the front door — the common case — costs exactly one.
      */
-    var API = 'https://auth.harithkavish.com';
+    var HOSTS = ['https://auth.harithkavish.com', 'https://account.harithkavish.com'];
+
+    /** Where the session was found, so every later call goes straight there. */
+    var API = HOSTS[0];
+
+    /*
+     * Signing in and out happen at the front door and nowhere else, whichever
+     * host turned out to hold the session. That is the ecosystem's rule, not
+     * this console's: one front door means the provider round trip has exactly
+     * one redirect URI to register.
+     */
+    var FRONT_DOOR = HOSTS[0];
 
     /*
      * One bounce, then stop.
@@ -140,18 +160,38 @@
     }
 
     function signInUrl() {
-        return API + '/?next=' + encodeURIComponent(location.href);
+        return FRONT_DOOR + '/?next=' + encodeURIComponent(location.href);
     }
 
     /* ---------------------------------------------------------------------- */
     /* The gate                                                               */
     /* ---------------------------------------------------------------------- */
 
-    function gate() {
-        show('gate-checking');
+    /*
+     * Ask each host in turn until one of them knows this visitor.
+     *
+     * A 401 is the only answer worth moving on from: it means "no session
+     * here", which the next host may contradict. A 403 is a verdict about a
+     * person the service has identified, and asking somewhere else would not
+     * change who they are.
+     *
+     * A host that cannot be reached at all is skipped rather than fatal — one
+     * of the two being down should not take the console with it — but if none
+     * of them answered, that is reported as unreachable rather than as a
+     * refusal, because "we could not ask" and "you may not" are different
+     * things and only one of them is the visitor's problem.
+     */
+    function askHosts(index, reachedAny) {
+        if (index >= HOSTS.length) {
+            return reachedAny
+                ? signedOut()
+                : failed('The identity service could not be reached.');
+        }
 
-        request('/api/admin/session').then(function (response) {
-            if (response.status === 401) return signedOut();
+        API = HOSTS[index];
+
+        return request('/api/admin/session').then(function (response) {
+            if (response.status === 401) return askHosts(index + 1, true);
 
             return response.json().then(function (body) {
                 if (response.status === 403) return denied(body.viewer);
@@ -160,8 +200,13 @@
                 return failed('The identity service gave an answer this console does not understand.');
             });
         }).catch(function () {
-            failed('The identity service could not be reached.');
+            return askHosts(index + 1, reachedAny);
         });
+    }
+
+    function gate() {
+        show('gate-checking');
+        askHosts(0, false);
     }
 
     function signedOut() {
@@ -185,7 +230,7 @@
         clearAttempt();
         el('denied-name').textContent = (viewer && viewer.name) || 'Unknown';
         el('denied-email').textContent = (viewer && viewer.email) || 'No address on this account';
-        el('denied-signout').href = API + '/signout?next=' + encodeURIComponent(location.href);
+        el('denied-signout').href = FRONT_DOOR + '/signout?next=' + encodeURIComponent(location.href);
         show('gate-denied');
     }
 
