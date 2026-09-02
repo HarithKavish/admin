@@ -346,10 +346,15 @@
 
     function matches(account, needle) {
         if (!needle) return true;
-        return [account.name, account.userId, account.email, account.id]
-            .some(function (field) {
-                return field && String(field).toLowerCase().indexOf(needle) !== -1;
-            });
+        var fields = [account.name, account.userId, account.email, account.id];
+        // An account whose only address is the one a provider asserted must
+        // still be findable by typing it.
+        (account.providerEmails || []).forEach(function (entry) {
+            fields.push(entry.email);
+        });
+        return fields.some(function (field) {
+            return field && String(field).toLowerCase().indexOf(needle) !== -1;
+        });
     }
 
     function compare(a, b) {
@@ -370,11 +375,24 @@
         return state.sortDirection === 'desc' ? -result : result;
     }
 
+    function label(issuer) {
+        return ISSUER_LABELS[issuer] || issuer.replace(/^https?:\/\//, '');
+    }
+
+    /*
+     * Only what can actually sign this person in.
+     *
+     * `authenticators` rather than every linked provider: Gravatar is linked in
+     * the same table and can never sign anyone in, so listing it here would
+     * claim a way into the account that does not exist. The service draws that
+     * line in `lib/auth/issuers.ts`, because it is a fact about the callbacks
+     * and cannot be read off the row.
+     */
     function waysIn(account) {
         var ways = [];
         if (account.hasPassword) ways.push('Password');
-        account.identities.forEach(function (issuer) {
-            ways.push(ISSUER_LABELS[issuer] || issuer.replace(/^https?:\/\//, ''));
+        (account.authenticators || []).forEach(function (issuer) {
+            ways.push(label(issuer));
         });
         if (account.passkeys > 0) {
             ways.push(account.passkeys === 1 ? 'Passkey' : account.passkeys + ' passkeys');
@@ -400,7 +418,19 @@
             identifier.appendChild(make('span', 'cell-none', 'Not chosen'));
         }
 
+        /*
+         * The address, and how it is known — which are two different facts.
+         *
+         * An account may carry none of its own while a provider has proved one:
+         * `proveEmail` fills `users.email` when a provider is connected, but the
+         * ordinary sign-in path does not, so a link made before that function
+         * existed leaves the column empty. Reporting "None" there says the
+         * account has no address, which is false. The pill names the source so
+         * the row cannot be misread either way.
+         */
         var address = cell(row);
+        var asserted = (account.providerEmails || [])[0];
+
         if (account.email) {
             var mail = make('span', 'cell-truncate', account.email);
             mail.title = account.email;
@@ -409,6 +439,13 @@
             address.appendChild(account.emailVerified
                 ? make('span', 'pill pill--live', 'Verified')
                 : make('span', 'pill pill--progress', 'Unproved'));
+        } else if (asserted) {
+            var lent = make('span', 'cell-truncate', asserted.email);
+            lent.title = asserted.email + ' — asserted by ' + label(asserted.issuer)
+                + '; not recorded on the account itself';
+            address.appendChild(lent);
+            address.appendChild(document.createTextNode(' '));
+            address.appendChild(make('span', 'pill pill--neutral', 'Via ' + label(asserted.issuer)));
         } else {
             address.appendChild(make('span', 'cell-none', 'None'));
         }
@@ -433,6 +470,19 @@
             'pill ' + (STATUS_PILLS[account.status] || 'pill--neutral'),
             STATUS_LABELS[account.status] || account.status
         ));
+
+        /* Linked, but not a way in. Kept apart from "Ways in" on purpose. */
+        var connected = cell(row);
+        var links = account.connections || [];
+        if (links.length === 0) {
+            connected.appendChild(make('span', 'cell-none', '—'));
+        } else {
+            var linkList = make('span', 'cell-ways');
+            links.forEach(function (issuer) {
+                linkList.appendChild(make('span', 'pill pill--neutral', label(issuer)));
+            });
+            connected.appendChild(linkList);
+        }
 
         cell(row, 'is-numeric').textContent = String(account.sessions);
 

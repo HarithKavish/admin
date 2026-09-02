@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/base.css?v=20260829.8">
     <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/components.css?v=20260829.8">
     <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/utils.css?v=20260829.8">
-    <link rel="stylesheet" href="/assets/admin.css?v=20260902.3">
+    <link rel="stylesheet" href="/assets/admin.css?v=20260902.4">
     <script src="https://harithkavish.com/design-system/v1.0.0/harith-store.js?v=20260829.8"></script>
     <script src="https://harithkavish.com/design-system/v1.0.0/theme-toggle.js?v=20260829.8"></script>
     <script src="https://harithkavish.com/design-system/v1.0.0/harith-shell.js?v=20260829.8"></script>
@@ -128,7 +128,8 @@
                         <p class="section-head__lead">
                             Every account in the identity service, newest first. Credentials are
                             not readable here and are never sent &mdash; a row says how someone
-                            can sign in, never what with.
+                            can sign in, never what with. &ldquo;Connected&rdquo; is a provider linked for
+                            something else &mdash; a picture, a profile &mdash; and is not a way in.
                         </p>
                     </div>
 
@@ -152,6 +153,7 @@
                                     <th scope="col"><button type="button" class="data-table__sort" data-sort="email">Address</button></th>
                                     <th scope="col">Ways in</th>
                                     <th scope="col"><button type="button" class="data-table__sort" data-sort="status">Status</button></th>
+                                    <th scope="col">Connected</th>
                                     <th scope="col" class="is-numeric"><button type="button" class="data-table__sort" data-sort="sessions">Sessions</button></th>
                                     <th scope="col" class="is-numeric"><button type="button" class="data-table__sort" data-sort="recoveryCodes">Recovery</button></th>
                                     <th scope="col"><button type="button" class="data-table__sort" data-sort="createdAt">Created</button></th>
@@ -187,6 +189,6 @@
 
     <!-- The main site's ecosystem list, read for the Surfaces section. -->
     <script src="https://harithkavish.com/site-data.js"></script>
-    <script src="/assets/admin.js?v=20260902.3"></script>
+    <script src="/assets/admin.js?v=20260902.4"></script>
 </body>
 </html>
