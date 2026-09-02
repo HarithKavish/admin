@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="The operator console for the Harith Kavish ecosystem.">
+    <!-- A console, not a page. Nothing here is for a search engine, and the
+         sign-in bounce below would only ever give a crawler a redirect loop. -->
+    <meta name="robots" content="noindex,nofollow">
+    <meta name="theme-color" content="#f5f1ea" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0b1014" media="(prefers-color-scheme: dark)">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <!-- The shared design system. Admin adds only what the system does not have. -->
+    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/tokens.css?v=20260829.8">
+    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/base.css?v=20260829.8">
+    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/components.css?v=20260829.8">
+    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/utils.css?v=20260829.8">
+    <link rel="stylesheet" href="/assets/admin.css?v=20260902.1">
+    <script src="https://harithkavish.com/design-system/v1.0.0/harith-store.js?v=20260829.8"></script>
+    <script src="https://harithkavish.com/design-system/v1.0.0/theme-toggle.js?v=20260829.8"></script>
+    <script src="https://harithkavish.com/design-system/v1.0.0/harith-shell.js?v=20260829.8"></script>
+    <title>Admin — Harith Kavish</title>
+</head>
+<body data-page="admin">
+    <div class="site-shell">
+        <harith-header
+            site-title="Harith Kavish"
+            site-tagline="Admin"
+            brand-href="https://harithkavish.com/"
+            brand-mark="https://harithkavish.com/favicon.svg"></harith-header>
+
+        <main class="site-main" id="main">
+            <!--
+              Four screens, one at a time, chosen by the answer the identity
+              service gives to "who is this, and may they read the dashboard?".
+              The console is not merely hidden from the others: it holds no data
+              until that answer is `owner`, because the data itself arrives only
+              from a second request that is refused the same way.
+            -->
+
+            <section class="gate" id="gate-checking" hidden>
+                <div class="section-head">
+                    <h1 class="section-head__title">Admin</h1>
+                    <p class="section-head__lead">Checking who is signed in&hellip;</p>
+                </div>
+                <div class="gate__spinner" role="status" aria-label="Checking"></div>
+            </section>
+
+            <section class="gate" id="gate-signed-out" hidden>
+                <div class="section-head">
+                    <h1 class="section-head__title">Sign in required</h1>
+                    <p class="section-head__lead">
+                        This console reads the account records for the whole ecosystem, so it
+                        asks the identity service who you are before it shows anything.
+                    </p>
+                </div>
+                <p>
+                    <a class="button button--primary" id="sign-in" href="https://auth.harithkavish.com/">Sign in</a>
+                </p>
+                <p class="note" id="sign-in-note" hidden>
+                    You were sent to the front door and came back without a session. That
+                    usually means cookies are blocked for <code>harithkavish.com</code> in
+                    this browser.
+                </p>
+            </section>
+
+            <section class="gate" id="gate-denied" hidden>
+                <div class="section-head">
+                    <h1 class="section-head__title">Access denied</h1>
+                    <p class="section-head__lead">
+                        This console belongs to one account. Yours is signed in, and is not it.
+                    </p>
+                </div>
+                <div class="factbox">
+                    <div class="factbox__cell">
+                        <span class="factbox__label">Signed in as</span>
+                        <span class="factbox__value" id="denied-name">&mdash;</span>
+                    </div>
+                    <div class="factbox__cell">
+                        <span class="factbox__label">Address</span>
+                        <span class="factbox__value" id="denied-email">&mdash;</span>
+                    </div>
+                </div>
+                <p class="gate__actions">
+                    <a class="button button--secondary" id="denied-signout" href="https://auth.harithkavish.com/signout">Sign out</a>
+                    <a class="button button--secondary" href="https://nexus.harithkavish.com/">Back to Nexus</a>
+                </p>
+            </section>
+
+            <section class="gate" id="gate-error" hidden>
+                <div class="section-head">
+                    <h1 class="section-head__title">Console unavailable</h1>
+                    <p class="section-head__lead" id="error-detail">
+                        The identity service did not answer.
+                    </p>
+                </div>
+                <p class="gate__actions">
+                    <button type="button" class="button button--primary" id="error-retry">Try again</button>
+                </p>
+            </section>
+
+            <!-- The console itself. -->
+            <div id="console" hidden>
+                <div class="masthead">
+                    <h1 class="masthead__title">Admin</h1>
+                    <p class="masthead__lead">
+                        One view of the Harith Kavish ecosystem &mdash; the accounts behind it,
+                        and the surfaces it runs on.
+                    </p>
+                </div>
+
+                <div class="stat-row" id="summary" aria-label="Account totals"></div>
+
+                <section class="console-section" id="accounts-section">
+                    <div class="section-head">
+                        <h2 class="section-head__title">Account holders</h2>
+                        <p class="section-head__lead">
+                            Every account in the identity service, newest first. Credentials are
+                            not readable here and are never sent &mdash; a row says how someone
+                            can sign in, never what with.
+                        </p>
+                    </div>
+
+                    <div class="index-tools">
+                        <div class="search">
+                            <input type="search" class="search__input" id="filter"
+                                   placeholder="Filter by name, identifier or address"
+                                   aria-label="Filter account holders" autocomplete="off">
+                        </div>
+                        <button type="button" class="button button--secondary" id="refresh">Refresh</button>
+                        <span class="index-count" id="count"></span>
+                    </div>
+
+                    <div class="table-scroll">
+                        <table class="data-table" id="accounts">
+                            <caption class="visually-hidden">Account holders</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col"><button type="button" class="data-table__sort" data-sort="name">Account</button></th>
+                                    <th scope="col"><button type="button" class="data-table__sort" data-sort="userId">Identifier</button></th>
+                                    <th scope="col"><button type="button" class="data-table__sort" data-sort="email">Address</button></th>
+                                    <th scope="col">Ways in</th>
+                                    <th scope="col"><button type="button" class="data-table__sort" data-sort="status">Status</button></th>
+                                    <th scope="col" class="is-numeric"><button type="button" class="data-table__sort" data-sort="sessions">Sessions</button></th>
+                                    <th scope="col" class="is-numeric"><button type="button" class="data-table__sort" data-sort="recoveryCodes">Recovery</button></th>
+                                    <th scope="col"><button type="button" class="data-table__sort" data-sort="createdAt">Created</button></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <p class="table-empty" id="accounts-empty" hidden>No account matches that filter.</p>
+                    <p class="table-note" id="read-at"></p>
+                </section>
+
+                <section class="console-section" id="surfaces-section">
+                    <div class="section-head">
+                        <h2 class="section-head__title">Surfaces</h2>
+                        <p class="section-head__lead">
+                            The ecosystem as the main site declares it, so a subdomain added
+                            there turns up here with no edit. The state shown is the one
+                            <code>site-data.js</code> publishes &mdash; what the ecosystem says
+                            about itself, not a reachability check.
+                        </p>
+                    </div>
+                    <div class="card-grid" id="surfaces"></div>
+                </section>
+            </div>
+        </main>
+
+        <harith-footer
+            copyright-text="Harith Kavish"
+            links='[{"label":"Nexus","href":"https://nexus.harithkavish.com/"},{"label":"Account","href":"https://account.harithkavish.com/account"},{"label":"Home","href":"https://harithkavish.com/"}]'></harith-footer>
+    </div>
+
+    <!-- The main site's ecosystem list, read for the Surfaces section. -->
+    <script src="https://harithkavish.com/site-data.js"></script>
+    <script src="/assets/admin.js?v=20260902.1"></script>
+</body>
+</html>

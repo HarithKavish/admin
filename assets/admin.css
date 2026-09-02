@@ -1,0 +1,267 @@
+/*
+ * Admin — the only styles this console defines.
+ *
+ * Everything else comes from the shared design system, and everything here is
+ * built from its tokens, so the console follows the theme without knowing what
+ * the theme is. The system has no data table and no gate screen; it has
+ * everything else, so nothing else is redefined.
+ */
+
+/* -------------------------------------------------------------------------- */
+/* Gate screens                                                               */
+/* -------------------------------------------------------------------------- */
+
+/* A refusal is a whole screen, not a banner over a table that is not there.
+   Centred and short: there is exactly one thing to read and at most one thing
+   to do. */
+.gate {
+    max-width: 46rem;
+    margin: clamp(1rem, 6vw, 4rem) auto;
+}
+
+.gate__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+
+/* Shown only while the identity service is being asked. Slow enough to read as
+   waiting rather than as something failing. */
+.gate__spinner {
+    width: 1.35rem;
+    height: 1.35rem;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: var(--radius-pill);
+    animation: gate-spin 700ms linear infinite;
+}
+
+@keyframes gate-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gate__spinner { animation-duration: 2.4s; }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Console layout                                                             */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * A console is not a content page.
+ *
+ * The system's container is 1160px, sized for prose at a comfortable measure.
+ * Eight columns of account data do not fit that and should not be squeezed into
+ * it; Timeline made the same call for the same reason. Widened for the whole
+ * shell rather than the table alone, so the header, the console and the footer
+ * still line up with each other.
+ */
+body[data-page='admin'] {
+    --container: min(1400px, calc(100% - 2rem));
+}
+
+.console-section {
+    margin-top: var(--section-gap);
+}
+
+/*
+ * Eight numbers, four to a row.
+ *
+ * The system's stat row auto-fits, which at this width put seven across and
+ * left the eighth stranded alone on a second row. Four divides evenly into
+ * eight, so the grid is stated rather than fitted — and the flush-left cell is
+ * then every fourth one, not only the first, because with two rows the first
+ * cell of the second row is also at the left edge.
+ */
+#summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+#summary .stat {
+    padding: 1.1rem 1.15rem;
+}
+
+#summary .stat:nth-child(4n + 1) {
+    padding-left: 0;
+}
+
+@media (max-width: 860px) {
+    #summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #summary .stat:nth-child(4n + 1) { padding-left: 1.15rem; }
+    #summary .stat:nth-child(2n + 1) { padding-left: 0; }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Data table                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The system's cards are for reading; this is for scanning. It borrows the card
+ * frame — same border, same radius, same surface — and puts rows inside it, so
+ * it reads as one of the system's surfaces rather than a browser default table.
+ *
+ * The scroller is on a wrapper rather than the table, so the page itself never
+ * scrolls sideways on a narrow screen.
+ */
+.table-scroll {
+    margin-top: 1.35rem;
+    overflow-x: auto;
+    background: var(--surface);
+    border: var(--border-hairline) solid var(--border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-sm);
+    /* Columns are read across, so a row must not wrap into three lines. Cells
+       that can be long ellipsise instead; the full value is in the title. */
+    white-space: nowrap;
+}
+
+.data-table th,
+.data-table td {
+    /* Eight columns have to fit the system's 1160px container without a
+       horizontal scroll on a desktop. This padding and the truncation width
+       below are what buy that; the scroller underneath is for narrower screens,
+       not for the common case. */
+    padding: 0.7rem 0.8rem;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.data-table thead th {
+    background: var(--surface-strong);
+    border-bottom: var(--border-hairline) solid var(--border);
+    color: var(--muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-label);
+}
+
+.data-table tbody tr + tr td {
+    border-top: var(--border-hairline) solid var(--border);
+}
+
+.data-table tbody tr:hover td {
+    background: var(--surface-soft);
+}
+
+.data-table .is-numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* A sortable heading is a button so it is reachable by keyboard and announced
+   as one. It inherits the heading's type rather than the browser's. */
+.data-table__sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.data-table__sort:hover { color: var(--text); }
+
+/* The arrow only exists on the column actually being sorted, so the header row
+   does not read as eight competing controls. */
+.data-table__sort[data-direction]::after {
+    content: '\2191';
+    font-size: 0.85em;
+    color: var(--accent);
+}
+
+.data-table__sort[data-direction='desc']::after { content: '\2193'; }
+
+.data-table .cell-name {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text);
+}
+
+/* The internal uuid, kept beneath the name: an operator needs something exact
+   to quote in a query, and the name is not it. */
+.data-table .cell-id {
+    display: block;
+    margin-top: 0.1rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0;
+}
+
+.data-table .cell-truncate {
+    display: inline-block;
+    max-width: 18ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
+}
+
+/* An absent value is a fact about the account, not a gap in the table — §6.4
+   allows both a missing identifier and a missing address. It is drawn as a
+   deliberate mark rather than left blank. */
+.data-table .cell-none {
+    color: var(--muted);
+}
+
+/* Wraps, so an account with a password, a provider and passkeys widens its own
+   cell to two lines rather than the whole table to a scrollbar. */
+.data-table .cell-ways {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    align-items: center;
+}
+
+/* The system's pill, at the size a table row can carry. */
+.data-table .pill {
+    font-size: 0.66rem;
+    padding: 0.16rem 0.5rem;
+}
+
+/* Zero unspent recovery codes is the one number on this table worth catching
+   from across the room: it is an account one bad day from permanent lockout. */
+.data-table .is-warning {
+    color: var(--status-danger-fg);
+    font-weight: var(--font-weight-semibold);
+}
+
+.table-empty,
+.table-note {
+    margin-top: 1rem;
+    color: var(--muted);
+    font-size: var(--font-size-sm);
+}
+
+.index-count {
+    color: var(--muted);
+    font-size: var(--font-size-sm);
+}
+
+/* Present for a screen reader, absent on screen — the table caption. */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+@media (max-width: 720px) {
+    .data-table .cell-truncate { max-width: 14ch; }
+}
