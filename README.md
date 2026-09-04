@@ -5,6 +5,9 @@ The operator console for the HarithKavish ecosystem —
 
 One account can open it. Everyone else, signed in or not, is told so.
 
+Part of the HarithKavish ecosystem. See [GOVERNANCE.md](GOVERNANCE.md) for what
+governs this repository.
+
 ---
 
 ## What it shows
